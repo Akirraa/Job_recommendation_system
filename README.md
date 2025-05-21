@@ -35,7 +35,6 @@ A Django-based platform that offers AI-driven job recommendations using resume p
 
 ```bash
 git clone https://github.com/Akirraa/smart-job-recommendation.git
-cd jobRecommandation
 ```
 
 ### 2. Create and activate virtual environment
