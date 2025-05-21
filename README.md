@@ -1,5 +1,3 @@
-
-```markdown
 # Smart Job Recommendation System
 
 A Django-based platform that offers AI-driven job recommendations using resume parsing, NLP, and multi-layer semantic matching. Supports both REST and GraphQL APIs for flexible integration.
