@@ -1,12 +1,11 @@
-from django.urls import path
-from .views import SkillListCreate, SkillDetail, JobListCreate, JobDetail
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
+from .views import SkillViewSet, JobViewSet
+
+router = DefaultRouter()
+router.register(r'skills', SkillViewSet, basename='skill')
+router.register(r'jobs', JobViewSet, basename='job')
 
 urlpatterns = [
-    # Skills endpoints
-    path('skills/', SkillListCreate.as_view(), name='skill-list-create'),
-    path('skills/<int:pk>/', SkillDetail.as_view(), name='skill-detail'),
-
-    # Jobs endpoints
-    path('jobs/', JobListCreate.as_view(), name='job-list-create'),
-    path('jobs/<int:pk>/', JobDetail.as_view(), name='job-detail'),
+    path('', include(router.urls)),
 ]

@@ -5,5 +5,4 @@ class ResumeConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
     name = 'Resume'
     
-    def ready(self):
-        import Resume.signals
+    

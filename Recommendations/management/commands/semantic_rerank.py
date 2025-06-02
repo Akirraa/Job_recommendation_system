@@ -62,14 +62,12 @@ class Command(BaseCommand):
             job_embeddings = torch.stack(job_embeddings)
 
 
-            # Compute cosine similarities
             similarities = util.cos_sim(user_embedding, job_embeddings)[0]
 
-            # Re-rank by new semantic similarity
             scored_jobs = list(zip(job_ids, similarities.tolist()))
             scored_jobs.sort(key=lambda x: x[1], reverse=True)
 
-            # Update Recommendation scores
+            
             for job_id, semantic_score in scored_jobs:
                 Recommendation.objects.filter(user=user, job__id=job_id).update(score=semantic_score)
 

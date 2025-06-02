@@ -1,98 +1,99 @@
 # Smart Job Recommendation System
 
-A Django-based platform that offers AI-driven job recommendations using resume parsing, NLP, and multi-layer semantic matching. Supports both REST and GraphQL APIs for flexible integration.
+An AI-powered Django platform that recommends jobs to users based on parsed resumes, semantic matching, and multi-layer NLP techniques. Built with REST and GraphQL APIs, asynchronous processing, and modern NLP libraries like spaCy and Sentence-BERT.
 
 ---
 
-## Features
+## 🚀 Features
 
-- Resume upload and automated parsing with PDFMiner and Transformer-based NLP models  
-- Extraction of candidate info: name, email, phone, location, skills, education, experience, certifications, projects  
-- Multi-layer recommendation engine: TF-IDF + Sentence-BERT semantic re-ranking  
-- Asynchronous processing with Celery and Redis  
-- JWT authentication and role-based access control (job seekers, recruiters)  
-- REST API endpoints for auth, resumes, recommendations  
-- GraphQL API for advanced queries and mutations  
-- Pagination, filtering, and search support  
-- Save or skip job recommendations via API
+* 🔐 JWT-based Authentication with role support (Job Seeker, Recruiter)
+* 📄 Resume upload with automatic parsing (name, email, phone, education, skills, experience, location)
+* 🧠 Multi-layer recommendation engine:
 
----
-
-## Tech Stack
-
-- Python 3.11, Django, Django REST Framework  
-- Graphene-Django for GraphQL  
-- Celery + Redis for asynchronous tasks  
-- NLP: spaCy, HuggingFace Transformers, pdfminer.six  
-- PostgreSQL database  
-- JWT Authentication
+  * Layer 1: TF-IDF filtering
+  * Layer 2: Sentence-BERT semantic re-ranking
+* ⚙️ Asynchronous resume processing and recommendation generation using Celery + Redis
+* 🧬 Vector storage for jobs and users
+* 🔍 GraphQL support for advanced querying and filtering
+* 🧾 REST API for user, resume, job, and recommendation management
 
 ---
 
-## Setup Instructions
+## 🧱 Tech Stack
 
-### 1. Clone the repository
+* **Backend:** Django, Django REST Framework, Graphene-Django
+* **NLP:** spaCy, HuggingFace Transformers, pdfplumber, Sentence-Transformers
+* **Database:** PostgreSQL
+* **Asynchronous Tasks:** Celery + Redis
+* **Authentication:** JWT (djangorestframework-simplejwt)
+
+---
+
+## 📦 Setup Instructions
+
+### 1. Clone the Repository
 
 ```bash
 git clone https://github.com/Akirraa/smart-job-recommendation.git
 cd jobRecommandation
 ```
 
-### 2. Create and activate virtual environment
+### 2. Create and Activate a Virtual Environment
 
 ```bash
-pipenv shell
+pipenv shell  # or python -m venv venv && source venv/bin/activate
 ```
 
-### 3. Install dependencies
+### 3. Install Dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 4. Configure environment variables
-
-Create a `.env` file in the project root with at least:
+### 4. Create a `.env` File
 
 ```env
-# general settings
 DEBUG=True
-SECRET_KEY= yoursecretkey
-
+SECRET_KEY=your_secret_key
 
 # Database
-DB_NAME=DBNAME
-DB_USER=DBUSER
-DB_PASSWORD=DBPASSWORD
+DB_NAME=your_db
+DB_USER=your_user
+DB_PASSWORD=your_password
 DB_HOST=localhost
 DB_PORT=5432
 
-REDIS_URL= REDIS_URL
+# Redis
+REDIS_URL=redis://localhost:6379
 ```
 
-### 5. Apply migrations
+### 5. Run Migrations
 
 ```bash
 python manage.py migrate
 ```
 
-### 6. Run Redis (needed for Celery)
+### 6. Run Redis
 
-Make sure Redis server is running locally or use a remote Redis service.
+Make sure Redis is running:
 
-### 7. Start Celery worker
+```bash
+redis-server
+```
+
+### 7. Start Celery Workers
 
 ```bash
 celery -A jobRecommandation worker --loglevel=info --pool=solo
 ```
 
-### 8. (Optional) Start Celery beat scheduler for periodic tasks
+(Optional) Start Celery Beat for periodic tasks:
 
 ```bash
-celery -A jobRecommandation beat --loglevel=info 
+celery -A jobRecommandation beat --loglevel=info
 ```
 
-### 9. Run Django development server
+### 8. Run the Django Server
 
 ```bash
 python manage.py runserver
@@ -100,147 +101,207 @@ python manage.py runserver
 
 ---
 
-## API Overview
+## 📤 Resume Upload & Parsing
 
-### REST API
+* PDF resumes are parsed using `pdfplumber` for raw text.
+* `ResumeData` is generated using spaCy NLP and regex extractors:
 
-| Endpoint                     | Method | Description                    |
-|------------------------------|--------|-------------------------------|
-| `/api/auth/register/`         | POST   | Register new user              |
-| `/api/auth/login/`            | POST   | Obtain JWT token               |
-| `/api/auth/profile/`          | GET    | Retrieve authenticated profile|
-| `/api/resume/upload/`         | POST   | Upload resume file             |
-| `/api/resume/data/<id>/`      | GET    | Get parsed resume data         |
-| `/api/recommendations/`       | GET    | List job recommendations       |
-| `/api/recommendations/save/`  | POST   | Save a recommendation          |
-| `/api/recommendations/skip/`  | POST   | Skip a recommendation          |
+  * Name
+  * Email
+  * Phone Number
+  * Location
+  * Skills
+  * Education
+  * Experience
 
-- Use JWT token in `Authorization: Bearer <token>` header for protected endpoints.
-- CSRF protection is enabled by default on session-based auth; use `@csrf_exempt` or token headers appropriately if needed for APIs.
+```bash
+python manage.py parse_resumes
+```
 
 ---
 
-### GraphQL API
+## 🧬 Vector Generation
 
-- Available at `/graphql/`
-- Supports queries and mutations:
+* **User Vectors:** Generated from parsed resume data using Sentence-BERT.
 
-#### Sample Queries
-
-```graphql
-query {
-  recommendations(userId: 1, first: 10, status: "pending") {
-    edges {
-      node {
-        id
-        job {
-          title
-          industry
-        }
-        score
-        status
-      }
-    }
-  }
-}
+```bash
+python manage.py generate_user_vectors
 ```
 
+* **Job Vectors:** TF-IDF vectors from job title and description.
+
+```bash
+python manage.py generate_job_vectors
+```
+
+---
+
+## 🔁 Recommendation Pipeline
+
+1. **Layer 1:** Matches user vectors to job vectors (TF-IDF based)
+2. **Layer 2:** Re-ranks top jobs using Sentence-BERT similarity
+3. **Layer 3:** (Coming soon) Context-aware personalization
+
+```bash
+python manage.py generate_recommendations
+python manage.py semantic_rerank
+```
+
+---
+
+## 🔐 REST API Endpoints
+
+| Endpoint                     | Method | Description                |
+| ---------------------------- | ------ | -------------------------- |
+| `/api/auth/register/`        | POST   | Register a new user        |
+| `/api/auth/login/`           | POST   | Login and obtain JWT       |
+| `/api/auth/profile/`         | GET    | Get current user's profile |
+| `/api/resumes/upload/`       | POST   | Upload a resume file       |
+| `/api/resumes/<id>/data/`    | GET    | Get parsed resume info     |
+| `/api/recommendations/`      | GET    | List job recommendations   |
+| `/api/recommendations/save/` | POST   | Save a job recommendation  |
+| `/api/recommendations/skip/` | POST   | Skip a job recommendation  |
+
+Use your JWT in headers:
+
+```http
+Authorization: Bearer <token>
+```
+
+---
+
+## 🧪 GraphQL API
+
+Available at: `/api/recommendations/graphql/`
+
+### Sample Query
+To get all recommendations  use :
 ```graphql
-query {
-  userVector(userId: 1) {
+query GetAllRecommendations {
+  allRecommendations {
+    generatedAt
     id
-    vector
+    job {
+      description
+      id
+      title
+    }
+    user {
+      email
+      fullName
+      id
+    }
+    score
   }
 }
 ```
 
-#### Sample Mutations
-
+### Sample Mutation
+To generate JobVectors use :
 ```graphql
 mutation {
-  saveRecommendation(recommendationId: 3) {
+  generateJobVectors {
+    message
+    success
+  }
+}
+```
+To generate UserVectors use:
+```graphql
+mutation {
+  generateUserVectors {
+    message
+    success
+  }
+}
+```
+To generate Recommendations use:
+```graphql
+mutation {
+  generateRecommendations {
+    message
+    success
+  }
+}
+```
+To do a semanic rerank use:
+```graphql
+mutation {
+  semanticRerank {
+    message
+    success
+  }
+}
+``` 
+To Parse Resumes use:
+```graphql
+mutation {
+  parseResumes {
     success
     message
   }
 }
-
-mutation {
-  updateUserVector(userId: 1, vector: "[0.12, 0.34, ...]") {
-    userVector {
-      id
-    }
-  }
-}
 ```
 
 ---
 
-## Resume Parsing Details
-
-- Uploaded resumes are processed asynchronously by Celery workers.
-- Resume text is extracted using `pdfminer.six`.
-- NLP extraction of name, email, phone, location, skills, education, experience, certifications, and projects is done using spaCy and Transformer models.
-- Parsed data is saved in the `ResumeData` model linked to the uploaded `Resume`.
-
----
-
-## Testing the APIs
-
-### REST
-
-Use tools like **Postman** or **curl**.
-
-Example login:
-
-```bash
-curl -X POST http://localhost:8000/api/auth/login/ \
-  -H "Content-Type: application/json" \
-  -d '{"email": "user@example.com", "password": "password"}'
-```
-
-Include the returned token in `Authorization` header for subsequent requests.
-
-### GraphQL
-
-Access the GraphiQL interface at `http://localhost:8000/api/recommendations/graphql/` to manually test queries and mutations.
-
----
-
-## Project Structure (Main apps)
+## 🗂 Project Structure
 
 ```
 jobRecommandation/
 ├── Applications/
-├── Jobs/
-├── Recommendations/
-├── Resume/
-├── UserAuth/
+├── UserAuth/         # Custom User + Profiles
+├── Jobs/             # Job model + Skill taxonomy
+├── Resume/           # Resume upload + parsing
+├── Recommendations/  # Multi-layer recommendation engine
 ├── templates/
-└── manage.py
+├── manage.py
 ```
 
 ---
 
-## What’s Done
+## 🧪 Testing
 
-- Custom User model with role-based access
-- Resume upload and parsing pipeline with Celery
-- NLP extraction with Transformers and spaCy
-- Job and User vectors for semantic recommendation
-- REST and GraphQL endpoints for recommendations and user data
-- Pagination, filtering, and mutation support in GraphQL
-- JWT authentication for secure access
+Links are available in a simple home page. (Exemple: Use `/api/recommendations/graphql/` for testing GraphQL.)
+Alternatively,
+Use Postman, Insomnia, or curl for REST endpoints.
+
+manage.py commands are also available for:
+-parsing resumes.
+-Generating UserVectors, JobVectors and recommendations.
+-Semantic Rerank.
+
+commands are:
+
+```bash
+python manage.py parse_resumes
+```
+```bash
+python manage.py generate_job_vectors 
+```
+```bash
+python manage.py generate_user_vectors
+```
+```bash
+python manage.py generate_recommendations
+```
+```bash
+python manage.py semantic_rerank
+```
+---
+
+## 🛠 To Do
+
+* Add third layer to recommendation engine (contextual / collaborative filtering)
+* Improve NLP parsing for certifications, projects, etc.
+* Add resume parsing via HuggingFace pipeline (NER)
+* Add job search by skill match
+* Add test coverage
+* Dockerize the project for production
+* Frontend in React or Next.js (optional)
 
 ---
 
-## What’s Next
+## 🧑‍💻 Contributors
 
-- Improve NLP extraction (certifications, projects parsing refinements)
-- Enhance recommendation algorithms and caching
-- Add third layer for the recommendation engine
-- Add frontend React/Next.js integration (optional)
-- Add more comprehensive test coverage
-- Deploy to cloud environment with Docker
-
-
----
+Built with ❤️ by [Akirraa](https://github.com/Akirraa)

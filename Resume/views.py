@@ -1,12 +1,12 @@
-from rest_framework import generics
+from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
+
 from .models import Resume, ResumeData
 from .serializers import ResumeSerializer, ResumeDataSerializer
-
 from Jobs.pagination import JobPagination
 
 
-class ResumeListCreateView(generics.ListCreateAPIView):
+class ResumeViewSet(viewsets.ModelViewSet):
     serializer_class = ResumeSerializer
     permission_classes = [IsAuthenticated]
     pagination_class = JobPagination
@@ -18,15 +18,7 @@ class ResumeListCreateView(generics.ListCreateAPIView):
         serializer.save(user=self.request.user)
 
 
-class ResumeRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
-    serializer_class = ResumeSerializer
-    permission_classes = [IsAuthenticated]
-
-    def get_queryset(self):
-        return Resume.objects.filter(user=self.request.user)
-
-
-class ResumeDataListView(generics.ListAPIView):
+class ResumeDataViewSet(viewsets.ModelViewSet):
     serializer_class = ResumeDataSerializer
     permission_classes = [IsAuthenticated]
     pagination_class = JobPagination
@@ -34,10 +26,8 @@ class ResumeDataListView(generics.ListAPIView):
     def get_queryset(self):
         return ResumeData.objects.filter(resume_file__user=self.request.user)
 
+    def get_serializer_class(self):
+        return ResumeDataSerializer
 
-class ResumeDataRetrieveUpdateView(generics.RetrieveUpdateAPIView):
-    serializer_class = ResumeDataSerializer
-    permission_classes = [IsAuthenticated]
-
-    def get_queryset(self):
-        return ResumeData.objects.filter(resume_file__user=self.request.user)
+    def perform_update(self, serializer):
+        serializer.save()

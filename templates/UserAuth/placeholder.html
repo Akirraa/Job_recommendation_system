@@ -1,0 +1,36 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Django Links Page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+        a {
+            display: block;
+            margin: 10px 0;
+            color: #007BFF;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <h1>Welcome to job recommendations api test</h1>
+    <p>Here are test links:</p>
+
+    <a href="{% url 'admin:index' %}">admin</a>
+    <a href="http://127.0.0.1:8000/api/auth/">auth api root</a>
+    <a href="http://127.0.0.1:8000/api/jobs/">jobs api root</a>
+    <a href="http://127.0.0.1:8000/api/applications/">applications api root</a>
+    <a href="http://127.0.0.1:8000/api/resume/">resume api root</a>
+    <a href="http://127.0.0.1:8000/api/recommendations/graphql/">graphql test</a>
+    
+
+</body>
+</html>

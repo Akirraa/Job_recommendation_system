@@ -1,7 +1,10 @@
-from django.urls import path
-from .views import RegisterView, LoginView, JobSeekerProfileView, RecruiterProfileView, PasswordResetRequestView, PasswordResetConfirmView, VerifyEmailView
+from django.urls import path, include
+from .views import api_root, RegisterView, LoginView, JobSeekerProfileView, RecruiterProfileView, PasswordResetRequestView, PasswordResetConfirmView, VerifyEmailView
+from rest_framework import urls as drf_urls
 
 urlpatterns = [
+    path('', api_root, name='api-root'),
+    path('api-auth/', include(drf_urls)),  # Enables the browsable API login
     path('register/', RegisterView.as_view(), name='register'),
     path('login/', LoginView.as_view(), name='login'),
     path('profile/jobseeker/', JobSeekerProfileView.as_view(), name='jobseeker-profile'),

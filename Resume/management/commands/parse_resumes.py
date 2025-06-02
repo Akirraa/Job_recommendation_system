@@ -1,66 +1,134 @@
+import os
 import re
+import pdfplumber
 import spacy
-from pdfminer.high_level import extract_text
-from ...models import Resume, ResumeData
-from Jobs.models import Skill
+from django.core.management.base import BaseCommand
 
-nlp = spacy.load("en_core_web_sm")  # or a transformer-based model
+nlp = spacy.load("en_core_web_sm")
 
-# Utility: Extract text from resume PDF
-def extract_resume_text(file_path):
-    try:
-        return extract_text(file_path)
-    except Exception as e:
-        print(f"[PDF Extract Error] {e}")
-        return ""
+EMAIL_REGEX = re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b")
+PHONE_REGEX = re.compile(r"(\+?\d{1,3}[\s-])?(?:\(?\d{3}\)?[\s-])?\d{3}[\s-]?\d{4}")
 
-# NLP Parsing Utility
-def parse_resume_text(text):
-    doc = nlp(text)
-    
-    # Extract email
-    email_match = re.search(r"[\w\.-]+@[\w\.-]+\.\w+", text)
-    email = email_match.group(0) if email_match else None
+class Command(BaseCommand):
+    help = "Parse resumes with empty parsed_text and save parsed data"
 
-    # Extract phone number (more robust pattern)
-    phone_match = re.search(r"\+?\d[\d\-\s]{8,15}\d", text)
-    phone = phone_match.group(0).strip() if phone_match else None
+    def extract_text_pdfplumber(self, file_path):
+        try:
+            with pdfplumber.open(file_path) as pdf:
+                pages_text = [page.extract_text() for page in pdf.pages if page.extract_text()]
+                return "\n".join(pages_text)
+        except Exception as e:
+            self.stdout.write(self.style.ERROR(f"Failed to extract text with pdfplumber: {e}"))
+            return ""
 
-    # Extract name (first PERSON entity)
-    name = None
-    for ent in doc.ents:
-        if ent.label_ == "PERSON":
-            name = ent.text
-            break
+    def extract_email(self, text):
+        match = EMAIL_REGEX.search(text)
+        return match.group(0) if match else ""
 
-    # Extract education and experience summary (basic example)
-    education = []
-    experience = []
-    for sent in doc.sents:
-        if "education" in sent.text.lower():
-            education.append(sent.text.strip())
-        if "experience" in sent.text.lower() or "worked at" in sent.text.lower():
-            experience.append(sent.text.strip())
+    def extract_phone(self, text):
+        match = PHONE_REGEX.search(text)
+        return match.group(0) if match else ""
 
-    # Extract location
-    location = None
-    for ent in doc.ents:
-        if ent.label_ in ["GPE", "LOC"]:
-            location = ent.text
-            break
+    def extract_name(self, text):
+        doc = nlp(text[:500])
+        for ent in doc.ents:
+            if ent.label_ == "PERSON":
+                return ent.text
+        return "Unknown"
 
-    # Extract potential skill names using noun chunks (can be extended with BERT later)
-    skill_phrases = set()
-    for chunk in doc.noun_chunks:
-        if 1 <= len(chunk.text) <= 40:
-            skill_phrases.add(chunk.text.strip().lower())
+    def extract_section(self, text, target_section_names):
+        """
+        Extract content of a section defined in target_section_names.
+        Stops at the start of the next known section header.
+        """
+        all_section_names = [
+            "Education", "Academic Background", "Educational Qualifications",
+            "Experience", "Work Experience", "Professional Experience",
+            "Skills", "Technical Skills", "Skills & Abilities", "Professional Skills",
+            "Projects", "Certifications", "Achievements", "Contact",
+            "Summary", "Location", "Address", "Personal Details", "Objective"
+        ]
 
-    return {
-        "name": name,
-        "email": email,
-        "phone": phone,
-        "education": "\n".join(education),
-        "experience": "\n".join(experience),
-        "location": location,
-        "skills": list(skill_phrases),
-    }
+        # Regex to detect all section headers
+        header_pattern = re.compile(rf"^\s*({'|'.join(all_section_names)})\s*[:\-]?\s*$", re.I | re.M)
+        matches = list(header_pattern.finditer(text))
+        if not matches:
+            return ""
+
+        section_text = ""
+        for i, match in enumerate(matches):
+            current_header = match.group(0).strip().lower()
+            if any(target.lower() in current_header for target in target_section_names):
+                start = match.end()
+                end = matches[i + 1].start() if i + 1 < len(matches) else len(text)
+                section_text = text[start:end].strip()
+                break
+
+        return section_text
+
+    def extract_skills_section(self, text):
+        skills_section = self.extract_section(
+            text, ["Skills", "Technical Skills", "Skills & Abilities", "Professional Skills"]
+        )
+        skills = re.split(r",|;|•|-|\n", skills_section)
+        return [skill.strip() for skill in skills if skill.strip()]
+
+    def handle(self, *args, **kwargs):
+        from Resume.models import Resume, ResumeData
+        from Jobs.models import Skill
+
+        resumes_to_parse = Resume.objects.filter(parsed_text__isnull=True)
+
+        if not resumes_to_parse.exists():
+            self.stdout.write("No resumes with empty parsed_text found.")
+            return
+
+        for resume in resumes_to_parse:
+            if not resume.file or not os.path.isfile(resume.file.path):
+                self.stdout.write(self.style.WARNING(f"Resume file not found for resume id={resume.id}"))
+                continue
+
+            self.stdout.write(f"Processing resume id={resume.id} for user {resume.user.email}")
+
+            file_path = resume.file.path
+            text = self.extract_text_pdfplumber(file_path)
+
+            if not text.strip():
+                self.stdout.write(self.style.WARNING(f"Could not extract text from file {resume.file.name}"))
+                continue
+
+            # Save raw extracted text
+            resume.parsed_text = text
+            resume.save()
+
+            candidate_name = self.extract_name(text)
+            email = self.extract_email(text)
+            phone = self.extract_phone(text)
+
+            education = self.extract_section(text, ["Education", "Academic Background", "Educational Qualifications"])
+            experience = self.extract_section(text, ["Experience", "Work Experience", "Professional Experience"])
+            location = self.extract_section(text, ["Location", "Address", "Contact Information"])
+            skills_found = self.extract_skills_section(text)
+
+            resume_data, created = ResumeData.objects.update_or_create(
+                resume_file=resume,
+                defaults={
+                    "candidate_name": candidate_name,
+                    "email": email,
+                    "phone_number": phone,
+                    "education_summary": education,
+                    "experience_summary": experience,
+                    "location": location,
+                }
+            )
+
+            resume_data.skills.clear()
+            for skill_name in skills_found:
+                normalized = skill_name.lower()
+                skill_obj, _ = Skill.objects.get_or_create(name=normalized)
+                resume_data.skills.add(skill_obj)
+
+            resume_data.save()
+            self.stdout.write(self.style.SUCCESS(f"Parsed data saved for resume id={resume.id}"))
+
+        self.stdout.write(self.style.SUCCESS("All applicable resumes parsed successfully."))

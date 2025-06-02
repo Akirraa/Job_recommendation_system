@@ -1,33 +1,48 @@
 from django.core.management.base import BaseCommand
+from sentence_transformers import SentenceTransformer
 import numpy as np
 
 from UserAuth.models import User
-from Applications.models import Application, Interaction
-from Recommendations.models import UserVector, JobVector
+from Resume.models import Resume, ResumeData
+from Recommendations.models import UserVector
 
 class Command(BaseCommand):
-    help = "Generate and store user vectors"
+    help = "Generate and store user vectors based on resume data"
 
     def handle(self, *args, **kwargs):
+        model = SentenceTransformer("all-MiniLM-L6-v2")
+
         users = User.objects.filter(jobseekerprofile__isnull=False)
 
         for user in users:
-            interacted_job_ids = set()
-            applied = Application.objects.filter(applicant__user=user).values_list("job_id", flat=True)
-            interacted = Interaction.objects.filter(user__user=user).values_list("job_id", flat=True)
-            interacted_job_ids.update(applied)
-            interacted_job_ids.update(interacted)
+            print(f"Processing user: {user.email}")
 
-            job_vectors = JobVector.objects.filter(job__id__in=interacted_job_ids)
-            if not job_vectors.exists():
+            try:
+                resume = Resume.objects.filter(user=user).order_by("-uploaded_at").first()
+                if not resume:
+                    print(f" - No resume found for user {user.email}")
+                    continue
+
+                resume_data = ResumeData.objects.get(resume_file=resume)
+
+                skills_text = ", ".join([skill.name for skill in resume_data.skills.all()])
+                combined_text = " ".join([
+                    skills_text,
+                    resume_data.experience_summary or "",
+                    resume_data.education_summary or "",
+                    resume_data.location or ""
+                ]).strip()
+
+                if not combined_text:
+                    print(f" - No meaningful resume content for {user.email}")
+                    continue
+
+                embedding = model.encode(combined_text)
+                UserVector.objects.update_or_create(user=user, defaults={"vector": embedding.tolist()})
+                print(f" - UserVector saved for {user.email}")
+
+            except ResumeData.DoesNotExist:
+                print(f" - No ResumeData for the resume of user {user.email}")
                 continue
 
-            vector_list = [np.array(jv.vector) for jv in job_vectors if jv.vector]
-            if not vector_list:
-                continue
-
-            avg_vector = np.mean(vector_list, axis=0).tolist()
-
-            UserVector.objects.update_or_create(user=user, defaults={"vector": avg_vector})
-
-        self.stdout.write(self.style.SUCCESS("User vectors generated."))
+        self.stdout.write(self.style.SUCCESS("User vectors generation based on resume data completed."))

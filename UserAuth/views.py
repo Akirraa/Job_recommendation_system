@@ -1,4 +1,5 @@
 #rest_framework imports
+from django.shortcuts import render
 from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -14,13 +15,17 @@ from django.utils.encoding import force_str
 #internal imports
 from .models import User, JobSeekerProfile, RecruiterProfile
 from .serializers import (
+    PasswordResetConfirmSerializer,
+    PasswordResetSerializer,
     RegisterSerializer,
     UserSerializer,
     JobSeekerProfileSerializer,
-    RecruiterProfileSerializer
+    RecruiterProfileSerializer,
+    LoginSerializer
 )
 from rest_framework.views import APIView
-
+from rest_framework.decorators import api_view
+from rest_framework.reverse import reverse
 
 class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
@@ -49,20 +54,14 @@ class RegisterView(generics.CreateAPIView):
 
 User = get_user_model()
 
-class LoginView(APIView):
+class LoginView(GenericAPIView):
+    serializer_class = LoginSerializer
     permission_classes = [AllowAny]
 
-    def post(self, request):
-        email = request.data.get("email")
-        password = request.data.get("password")
-
-        try:
-            user = User.objects.get(email=email)
-        except User.DoesNotExist:
-            return Response({"detail": "Invalid credentials."}, status=status.HTTP_401_UNAUTHORIZED)
-
-        if not user.check_password(password):
-            return Response({"detail": "Invalid credentials."}, status=status.HTTP_401_UNAUTHORIZED)
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.validated_data["user"]
 
         refresh = RefreshToken.for_user(user)
         return Response({
@@ -109,9 +108,13 @@ class LogoutView(APIView):
 
 class PasswordResetRequestView(GenericAPIView):
     permission_classes = [AllowAny]
+    serializer_class = PasswordResetSerializer
 
     def post(self, request):
-        form = PasswordResetForm(data=request.data)
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        form = PasswordResetForm(data=serializer.validated_data)
         if form.is_valid():
             form.save(
                 request=request,
@@ -125,6 +128,7 @@ class PasswordResetRequestView(GenericAPIView):
 
 class PasswordResetConfirmView(GenericAPIView):
     permission_classes = [AllowAny]
+    serializer_class = PasswordResetConfirmSerializer
 
     def post(self, request, uidb64, token):
         UserModel = get_user_model()
@@ -135,13 +139,20 @@ class PasswordResetConfirmView(GenericAPIView):
             user = None
 
         if user is not None and default_token_generator.check_token(user, token):
-            form = SetPasswordForm(user=user, data=request.data)
+            serializer = self.get_serializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+
+            form = SetPasswordForm(user=user, data={
+                'new_password1': serializer.validated_data['new_password1'],
+                'new_password2': serializer.validated_data['new_password2'],
+            })
+
             if form.is_valid():
                 form.save()
                 return Response({"detail": "Password has been reset."})
             return Response(form.errors, status=400)
-        return Response({"detail": "Invalid or expired token."}, status=400)
-    
+
+        return Response({"detail": "Invalid or expired token."}, status=400)   
 
 
 #email verification view
@@ -160,3 +171,20 @@ class VerifyEmailView(APIView):
             return Response({"detail": "Email verified successfully."}, status=status.HTTP_200_OK)
         else:
             return Response({"detail": "Invalid or expired token."}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['GET'])
+def api_root(request, format=None):
+    return Response({
+        'register': reverse('register', request=request, format=format),
+        'login': reverse('login', request=request, format=format),
+        'jobseeker-profile': reverse('jobseeker-profile', request=request, format=format),
+        'recruiter-profile': reverse('recruiter-profile', request=request, format=format),
+        'password-reset': reverse('password_reset', request=request, format=format),
+        'verify-email': 'Use POST with uid/token to verify email (dynamic)',
+    })
+    
+    
+    
+def placeholderView(request):
+    return render(request, 'UserAuth/placeholder.html')

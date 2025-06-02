@@ -1,26 +1,23 @@
 from django.core.management.base import BaseCommand
-from sklearn.feature_extraction.text import TfidfVectorizer
-import numpy as np
+from sentence_transformers import SentenceTransformer
 
 from Jobs.models import Job
 from Recommendations.models import JobVector
 
 class Command(BaseCommand):
-    help = "Generate and store TF-IDF vectors for active jobs"
+    help = "Generate and store Sentence-BERT vectors for active jobs"
 
     def handle(self, *args, **kwargs):
+        model = SentenceTransformer("all-MiniLM-L6-v2")
         jobs = Job.objects.filter(is_active=True)
-        job_texts = [f"{job.title} {job.description}" for job in jobs]
 
-        if not job_texts:
+        if not jobs.exists():
             self.stdout.write(self.style.WARNING("No active jobs found."))
             return
 
-        vectorizer = TfidfVectorizer(stop_words="english", max_features=300)
-        tfidf_matrix = vectorizer.fit_transform(job_texts)
+        for job in jobs:
+            job_text = f"{job.title} {job.description or ''}"
+            embedding = model.encode(job_text)
+            JobVector.objects.update_or_create(job=job, defaults={"vector": embedding.tolist()})
 
-        for i, job in enumerate(jobs):
-            vector = tfidf_matrix[i].toarray().flatten().tolist()
-            JobVector.objects.update_or_create(job=job, defaults={"vector": vector})
-
-        self.stdout.write(self.style.SUCCESS("TF-IDF vectors generated for all active jobs."))
+        self.stdout.write(self.style.SUCCESS("Sentence-BERT vectors generated for all active jobs."))
