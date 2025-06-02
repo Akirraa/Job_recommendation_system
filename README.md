@@ -15,7 +15,7 @@ An AI-powered Django platform that recommends jobs to users based on parsed resu
 * ⚙️ Asynchronous resume processing and recommendation generation using Celery + Redis
 * 🧬 Vector storage for jobs and users
 * 🔍 GraphQL support for advanced querying and filtering
-* 🧾 REST API for user, resume, job, and recommendation management
+* 🧾 REST API for user, resume, job, and job applications management
 
 ---
 
