@@ -34,7 +34,7 @@ An AI-powered Django platform that recommends jobs to users based on parsed resu
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/Akirraa/smart-job-recommendation.git
+git clone https://github.com/Akirraa/Job_recommendation_system.git
 cd jobRecommandation
 ```
 
