@@ -75,7 +75,7 @@ python manage.py migrate
 
 ### 6. Run Redis
 
-Make sure Redis is running:
+Make sure Redis is running (if you dou not have redis you can download a docker container or wsl or any other solution ):
 
 ```bash
 redis-server
