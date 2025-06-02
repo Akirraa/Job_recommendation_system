@@ -6,7 +6,7 @@ An AI-powered Django platform that recommends jobs to users based on parsed resu
 
 ## 🚀 Features
 
-* 🔐 JWT-based Authentication with role support (Job Seeker, Recruiter)
+* 🔐 JWT-based Authentication with role support (Job Seeker, Recruiter) and Throttle for request limiting
 * 📄 Resume upload with automatic parsing (name, email, phone, education, skills, experience, location)
 * 🧠 Multi-layer recommendation engine:
 
