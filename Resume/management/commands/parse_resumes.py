@@ -3,6 +3,8 @@ import re
 import pdfplumber
 import spacy
 from django.core.management.base import BaseCommand
+from Resume.models import Resume, ResumeData
+from Jobs.models import Skill
 
 nlp = spacy.load("en_core_web_sm")
 
@@ -32,7 +34,7 @@ class Command(BaseCommand):
     def extract_name(self, text):
         doc = nlp(text[:500])
         for ent in doc.ents:
-            if ent.label_ == "PERSON":
+            if ent.label_ == "Name":
                 return ent.text
         return "Unknown"
 
@@ -74,8 +76,7 @@ class Command(BaseCommand):
         return [skill.strip() for skill in skills if skill.strip()]
 
     def handle(self, *args, **kwargs):
-        from Resume.models import Resume, ResumeData
-        from Jobs.models import Skill
+
 
         resumes_to_parse = Resume.objects.filter(parsed_text__isnull=True)
 

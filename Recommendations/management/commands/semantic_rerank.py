@@ -17,7 +17,7 @@ class Command(BaseCommand):
         users = User.objects.filter(jobseekerprofile__isnull=False)
 
         for user in users:
-            # Get top jobs from Layer 1 (TF-IDF) recommendations
+            # Get top jobs from Layer 1 (SBERT) recommendations
             top_recs = Recommendation.objects.filter(user=user).order_by('-score')[:50]
 
             if not top_recs:

@@ -4,7 +4,7 @@ from rest_framework import urls as drf_urls
 
 urlpatterns = [
     path('', api_root, name='api-root'),
-    path('api-auth/', include(drf_urls)),  # Enables the browsable API login
+    path('api-auth/', include(drf_urls)),  
     path('register/', RegisterView.as_view(), name='register'),
     path('login/', LoginView.as_view(), name='login'),
     path('profile/jobseeker/', JobSeekerProfileView.as_view(), name='jobseeker-profile'),
