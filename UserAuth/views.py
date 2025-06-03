@@ -50,8 +50,6 @@ class RegisterView(generics.CreateAPIView):
         }, status=status.HTTP_201_CREATED)
 
 
-
-
 User = get_user_model()
 
 class LoginView(GenericAPIView):

@@ -2,7 +2,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from Jobs.models import Job
 from ..models import JobVector
 import numpy as np
-
+#unused code (no longer using tfidf)
 def build_job_corpus():
     jobs = Job.objects.all()
     corpus = []
